@@ -1,0 +1,89 @@
+receivers:
+  kafka/traces:
+    brokers:
+      - otel-kafka-bootstrap.kafka-cluster:9094
+    protocol_version: 3.9.0
+    topic: otel-traces
+    auth:
+      sasl:
+        username: ${env:KAFKA_USERNAME}
+        password: ${env:KAFKA_PASSWORD}
+        mechanism: SCRAM-SHA-512
+        version: 1
+  kafka/metrics:
+    brokers:
+      - otel-kafka-bootstrap.kafka-cluster:9094
+    protocol_version: 3.9.0
+    topic: otel-metrics
+    auth:
+      sasl:
+        username: ${env:KAFKA_USERNAME}
+        password: ${env:KAFKA_PASSWORD}
+        mechanism: SCRAM-SHA-512
+        version: 1
+  kafka/logs:
+    brokers:
+      - otel-kafka-bootstrap.kafka-cluster:9094
+    protocol_version: 3.9.0
+    topic: otel-logs
+    auth:
+      sasl:
+        username: ${env:KAFKA_USERNAME}
+        password: ${env:KAFKA_PASSWORD}
+        mechanism: SCRAM-SHA-512
+        version: 1
+
+
+processors:
+  batch:
+  memory_limiter:
+    # 80% of maximum memory up to 2G
+    limit_mib: 1500
+    # 25% of limit up to 2G
+    spike_limit_mib: 512
+    check_interval: 5s
+
+exporters:
+  
+  otlp/tempo:
+    endpoint: "http://tempo.tempo:4317" 
+    tls:
+      insecure: true
+  otlphttp/tempo:
+    endpoint: "http://tempo.tempo:4318" 
+    
+  # https://grafana.com/docs/loki/latest/send-data/otel/
+  otlphttp/loki:
+    endpoint: http://loki.loki:3100/otlp
+  
+  # https://prometheus.io/docs/guides/opentelemetry/
+  # https://github.com/open-telemetry/opentelemetry-collector/blob/main/exporter/otlphttpexporter/README.md
+  otlphttp/prometheus:
+    endpoint: http://prometheus-server.prometheus:80/api/v1/otlp
+    encoding: proto
+    # we only have metrics
+    metrics_endpoint: http://prometheus-server.prometheus:80/api/v1/otlp/v1/metrics
+    # TBD: not sure, but didnt find a way to turn off
+    traces_endpoint: none
+    logs_endpoint: none
+
+  # https://github.com/open-telemetry/opentelemetry-collector/blob/main/exporter/debugexporter/README.md
+  debug: 
+    verbosity: basic # basic/detailed 
+
+service:
+  pipelines: 
+    traces:
+      receivers: [kafka/traces]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/tempo, debug]
+
+    logs:
+      receivers: [kafka/logs]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/loki, debug]
+      
+    metrics:
+      receivers: [kafka/metrics]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/prometheus, debug]

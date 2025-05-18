@@ -1,0 +1,75 @@
+# .rules_changes: &rules_changes
+#   changes:
+#     paths:
+#       - /config/${ENVIRONMENT}/**/*
+#       - /config/${ENVIRONMENT}/${STACK}/**/*
+#       - /stacks/${STACK}/**/*
+#       - /modules/**/*
+#       - /.gitlab-ci/**/*
+#     compare_to: main
+
+.base:
+  variables:
+    TF_ROOT: ${CI_PROJECT_DIR}/config/${ENVIRONMENT}/${STACK}
+    CI: "true"
+  allow_failure: true
+  tags:
+    - obs-poc
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "${KUBECONFIG_DATA}" > ~/.kube/config
+    # credentials
+    - mkdir -p ~/.terraform.d
+    - envsubst < credentials.tfrc.json > ~/.terraform.d/credentials.tfrc.json
+    - envsubst < .tofurc > ~/.tofurc
+    - envsubst < .terraformrc > ~/.terraformrc
+  # rules:
+  #   - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+  #     #<<: *rules_changes
+  #   - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  #     #<<: *rules_changes
+
+.plan:
+  extends: .base
+  stage: plan
+  script:
+    - shopt -s expand_aliases
+    - alias convert_report="jq -r '([.resource_changes[]?.change.actions?]|flatten)|{\"create\":(map(select(.==\"create\"))|length),\"update\":(map(select(.==\"update\"))|length),\"delete\":(map(select(.==\"delete\"))|length)}'"
+    #- mkdir -p ~/.ssh
+    #- ssh-keyscan -t rsa gitlab.bare.pandrosion.org > ~/.ssh/known_hosts
+    #- eval `ssh-agent`
+    #- base64 -d ${SSH_PRIV_KEY} > ~/.ssh/priv
+    #- chmod 0400 ~/.ssh/priv
+    #- ssh-add -v ~/.ssh/priv
+    - cd ${TF_ROOT}
+    - terragrunt  --terragrunt-tfpath tofu init
+    - terragrunt plan --terragrunt-tfpath tofu -out=${TF_ROOT}/${PLAN}
+    - terragrunt show --terragrunt-tfpath tofu --json ${TF_ROOT}/${PLAN} | convert_report > ${TF_ROOT}/${PLAN_JSON}
+  artifacts:
+    name: $CI_JOB_NAME
+    paths:
+      - ${TF_ROOT}/${PLAN}
+      - ${TF_ROOT}/${PLAN_JSON}
+      - ${TF_ROOT}/.terragrunt-cache/
+      - ${TF_ROOT}/.terraform.lock.hcl
+    reports:
+      terraform: ${TF_ROOT}/${PLAN_JSON}
+
+.apply:
+  extends: .base
+  # rules:
+  #   - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+  #     #<<: *rules_changes
+  #   - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+  #     #<<: *rules_changes
+  #     #when: never
+  when: manual
+  #allow_failure: false
+  stage: apply
+  script:
+    - cd ${TF_ROOT}
+    - terragrunt apply --terragrunt-tfpath tofu ${TF_ROOT}/${PLAN}
+    # we only accept an apply to have worked if the plan afterwards has no changes
+    # detailed exitcode will do exactly that, as it will have 0 for no changes, but 1 for error and 2 for changes
+    # see also terraform cli documentation
+    - terragrunt plan --terragrunt-tfpath tofu -detailed-exitcode

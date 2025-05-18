@@ -1,0 +1,12 @@
+// https://confluence.bare.pandrosion.org/pages/viewpage.action?pageId=246095973
+// https://jfrog.com/help/r/jfrog-artifactory-documentation/configure-terraform-provider-registry-with-artifactory-using-terraform-client/
+// https://jfrog.com/help/r/artifactory-configure-an-opentofu-registry-with-the-artifactory/artifactory-configure-an-opentofu-registry-with-the-artifactory
+
+provider_installation {
+    direct {
+        exclude = ["registry.opentofu.org/*/*", "registry.terraform.io/*/*"]
+    }
+    network_mirror {
+        url = "https://${ARTIFACTORY_HOST}/artifactory/api/terraform/opentofu-remote/providers/"
+    }
+}

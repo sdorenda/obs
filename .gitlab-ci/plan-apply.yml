@@ -1,0 +1,185 @@
+include:
+  - local: /.gitlab-ci/base.yml
+
+stages:
+  - plan
+  - apply
+
+# Otel Collector
+
+otel-collector-plan:
+  extends: [ .plan]
+  variables:
+    STACK: otel-collector
+
+otel-collector-apply:
+  needs:
+    - otel-collector-plan
+  extends: [ .apply]
+  variables:
+    STACK: otel-collector
+
+
+# Otel Operator
+
+otel-operator-plan:
+  extends: [ .plan]
+  variables:
+    STACK: otel-operator
+
+otel-operator-apply:
+  needs:
+    - otel-operator-plan
+  extends: [ .apply]
+  variables:
+    STACK: otel-operator
+
+
+# Otel Receiver
+
+otel-receiver-plan:
+  extends: [ .plan]
+  variables:
+    STACK: otel-receiver
+
+otel-receiver-apply:
+  needs:
+    - otel-receiver-plan
+  extends: [ .apply]
+  variables:
+    STACK: otel-receiver
+
+
+# Loki
+
+loki-plan:
+  extends: [ .plan]
+  variables:
+    STACK: loki
+
+loki-apply:
+  needs:
+    - loki-plan
+  extends: [ .apply]
+  variables:
+    STACK: loki
+
+
+# Prometheus
+
+prometheus-plan:
+  extends: [ .plan]
+  variables:
+    STACK: prometheus
+
+prometheus-apply:
+  needs:
+    - prometheus-plan
+  extends: [ .apply]
+  variables:
+    STACK: prometheus
+
+
+# Tempo
+
+tempo-plan:
+  extends: [ .plan]
+  variables:
+    STACK: tempo
+
+tempo-apply:
+  needs:
+    - tempo-plan
+  extends: [ .apply]
+  variables:
+    STACK: tempo
+
+
+# Grafana
+
+grafana-plan:
+  extends: [ .plan]
+  variables:
+    STACK: grafana
+
+grafana-apply:
+  needs:
+    - grafana-plan
+  extends: [ .apply]
+  variables:
+    STACK: grafana
+
+
+# Grafana Config
+
+grafana-config-plan:
+  extends: [ .plan]
+  variables:
+    STACK: grafana-config
+
+grafana-config-apply:
+  needs:
+    - grafana-config-plan
+  extends: [ .apply]
+  variables:
+    STACK: grafana-config
+
+
+# Kadeck
+
+kadeck-plan:
+  extends: [ .plan]
+  variables:
+    STACK: kadeck
+
+kadeck-apply:
+  needs:
+    - kadeck-plan
+  extends: [ .apply]
+  variables:
+    STACK: kadeck
+
+
+# Kafka Cluster
+
+kafka-cluster-plan:
+  extends: [ .plan]
+  variables:
+    STACK: kafka-cluster
+
+kafka-cluster-apply:
+  needs:
+    - kafka-cluster-plan
+  extends: [ .apply]
+  variables:
+    STACK: kafka-cluster
+
+
+# Kafka Operator
+
+kafka-operator-plan:
+  extends: [ .plan]
+  variables:
+    STACK: kafka-operator
+
+kafka-operator-apply:
+  needs:
+    - kafka-operator-plan
+  extends: [ .apply]
+  variables:
+    STACK: kafka-operator
+
+
+# CNPG Operator
+
+cnpg-operator-plan:
+  extends: [ .plan]
+  variables:
+    STACK: cnpg-operator
+
+cnpg-operator-apply:
+  needs:
+    - cnpg-operator-plan
+  extends: [ .apply]
+  variables:
+    STACK: cnpg-operator

@@ -1,0 +1,36 @@
+variables:
+  PLAN: plan.cache
+  PLAN_JSON: plan.json
+
+stages:
+  - test
+  - run
+
+tflint:
+  stage: test
+  tags:
+    - obs-poc
+  allow_failure: true
+  script:
+    - tflint --recursive
+
+trivy:
+  stage: test
+  tags:
+    - obs-poc
+  allow_failure: true
+  script:
+    - trivy fs --exit-code 0 --severity HIGH,CRITICAL --no-progress --ignore-unfixed .
+    - trivy config ./
+
+dev:
+  stage: run
+  variables:
+    ENVIRONMENT: dev
+    KUBECONFIG_DATA: $DEV_KUBECONFIG
+    #KUBE_HOST: $DEV_KUBECONFIG
+    #KUBE_CLUSTER_CA_CERT_DATA: $DEV_KUBE_CLUSTER_CA_CERT_DATA
+    #CLIENT_CERT_DATA: $DEV_CLIENT_CERT_DATA
+    #CLIENT_KEY_DATA: $DEV_CLIENT_KEY_DATA
+  trigger:
+    include: .gitlab-ci/plan-apply.yml
